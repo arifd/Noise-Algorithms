@@ -348,3 +348,90 @@ public:
     	return (mt() / 4294967296.0) * 2 - 1;
 	}
 };
+
+//==============================================================================
+
+// Taken from here: https://github.com/supercollider/supercollider/blob/develop/include/plugin_interface/SC_RGen.h
+
+//----------------------------------------------------------------------------//
+// Ran088: L'Ecuyer's 1996 three-component Tausworthe generator "taus88"
+//----------------------------------------------------------------------------//
+//
+// Returns an integer random number uniformly distributed within [0,4294967295]
+//
+// The period length is approximately 2^88 (which is 3*10^26).
+// This generator is very fast and passes all standard statistical tests.
+//
+// Reference:
+//   (1) P. L'Ecuyer, Maximally equidistributed combined Tausworthe generators,
+//       Mathematics of Computation, 65, 203-213 (1996), see Figure 4.
+//   (2) recommended in:
+//       P. L'Ecuyer, Random number generation, chapter 4 of the
+//       Handbook on Simulation, Ed. Jerry Banks, Wiley, 1997.
+//
+//----------------------------------------------------------------------------//
+
+class Taus88 : public AudioIODeviceCallback
+{
+private:
+	int seed = 101;
+	uint32 s1, s2, s3; // random generator state
+public:
+	int32 Hash(int32 inKey)
+	{
+	    // Thomas Wang's integer hash.
+	    // http://www.concentric.net/~Ttwang/tech/inthash.htm
+	    // a faster hash for integers. also very good.
+	    uint32 hash = (uint32)inKey;
+	    hash += ~(hash << 15);
+	    hash ^=   hash >> 10;
+	    hash +=   hash << 3;
+	    hash ^=   hash >> 6;
+	    hash += ~(hash << 11);
+	    hash ^=   hash >> 16;
+	    return (int32)hash;
+	}
+
+	Taus88()
+	{
+		// humans tend to use small seeds - mess up the bits
+		seed = (uint32)Hash((int)seed);
+
+		// initialize seeds using the given seed value taking care of
+		// the requirements. The constants below are arbitrary otherwise
+		s1 = 1243598713U ^ seed; if (s1 <  2) s1 = 1243598713U;
+		s2 = 3093459404U ^ seed; if (s2 <  8) s2 = 3093459404U;
+		s3 = 1821928721U ^ seed; if (s3 < 16) s3 = 1821928721U;
+	}
+
+	uint32 trand( uint32& s1, uint32& s2, uint32& s3 )
+	{
+		// This function is provided for speed in inner loops where the
+		// state variables are loaded into registers.
+		// Thus updating the instance variables can
+		// be postponed until the end of the loop.
+		s1 = ((s1 &  (uint32)-2) << 12) ^ (((s1 << 13) ^  s1) >> 19);
+		s2 = ((s2 &  (uint32)-8) <<  4) ^ (((s2 <<  2) ^  s2) >> 25);
+		s3 = ((s3 & (uint32)-16) << 17) ^ (((s3 <<  3) ^  s3) >> 11);
+		return s1 ^ s2 ^ s3;
+	}
+
+	void audioDeviceAboutToStart(AudioIODevice *device) override {}
+	void audioDeviceStopped() override {}
+
+	void audioDeviceIOCallback(const float **inputChannelData, int numInputChannels,
+		float **outputChannelData, int numOutputChannels, int numSamples) override
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			float sample = generate();
+			outputChannelData[0][i] = sample;
+			outputChannelData[1][i] = sample;
+		}
+	}
+
+	float generate()
+	{
+		return (trand(s1, s2, s3) / 4294967296.0) * 2 - 1;
+	}
+};
