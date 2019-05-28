@@ -12,6 +12,7 @@ It features:
 - Xorshift
 - custom implementation of Marsenne-Twister
 - std::mt19937
+- Taus88
 
 These examples are built inside the JUCE framework, but extracting them for use anywhere is simple enough.
 
