@@ -19,8 +19,9 @@ private:
 	XOR32 xor32;
 	MersenneTwister mt;
 	STDMT19937 stdmt;
+	Taus88 taus88;
 
-	int numAlgorithms = 6;
+	int numAlgorithms = 7;
 
 public:
 	AlgorithmManager()
@@ -41,6 +42,7 @@ public:
 			case 3: { currentAlgorithm = &xor32; break; }
 			case 4: { currentAlgorithm = &mt; break; }
 			case 5: { currentAlgorithm = &stdmt; break; }
+			case 6: { currentAlgorithm = &taus88; break; }
 		}
 
 		return currentAlgorithm;
@@ -61,6 +63,7 @@ std::string algorithmName(int value)
 			case 3 : return "XOR32";
 			case 4 : return "Mersenne Twister";
 			case 5 : return "STD Mersenne Twister Implementaton";
+			case 6 : return "Taus88";
 		}
 
 	return "error";
@@ -80,7 +83,7 @@ int main ()
 	std::cout << "Algorithms:" << std::endl;
 	for (int i = 0; i < am.getNumAlgorithms(); i++)
 	{
-		std::cout << algorithmName(i) << std::endl;
+		std::cout << i << ": " << algorithmName(i) << std::endl;
 	}
 	std::cout << "-----------------------------" << std::endl;
 
@@ -94,11 +97,18 @@ int main ()
 		dm.addAudioCallback(am.setCurrentAlgorithm(input));
 
 		std::cout << "Selected algorithm: ";
-
 		std::cout << algorithmName(input) << std::endl;
 
-		std::cout << "CPU Usage: " << dm.getCpuUsage() << std::endl;
+		std::cout << "Calculating CPU usage..." << std::endl;
 
+		int numLoops = 100;
+		float cpuScore = 0;
+		for (int i = 0; i < numLoops; ++i)
+		{
+			cpuScore += dm.getCpuUsage();
+			Time::waitForMillisecondCounter(Time::getMillisecondCounter() + 50);
+		} 
+		std::cout << "Average CPU usage: " << (cpuScore/numLoops) << std::endl;
 	}
 
 
